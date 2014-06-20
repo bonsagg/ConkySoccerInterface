@@ -1,16 +1,21 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2.7
 # coding:utf-8
 
 import suds
 import datetime
 import sys
 import locale
+import calendar
+
 locale.setlocale(locale.LC_ALL, '')
 
 ## Define League
-LEAGUE_NAME = "em12"
-LEAGUE_SAISON = "2012"
-LEAGUE_ID = 429
+LEAGUE_NAME = "fifa2014"
+LEAGUE_SAISON = "2014"
+LEAGUE_ID = 739
+
+##configure difference from utc
+DIFF_UTC = 2
 
 ## SOAP Interface
 URL = "http://www.openligadb.de/Webservices/Sportsdata.asmx?WSDL"
@@ -19,7 +24,7 @@ URL = "http://www.openligadb.de/Webservices/Sportsdata.asmx?WSDL"
 client = suds.client.Client(URL)
 
 ## Only show games within a certain period
-fromtime = datetime.datetime.combine(datetime.date.today(), datetime.time(0,0,0))#-datetime.timedelta(days=1)
+fromtime = datetime.datetime.combine(datetime.date.today(), datetime.time(0,0,0))
 totime = fromtime + datetime.timedelta(days=1)
 
 ## Get Match-List
@@ -30,13 +35,14 @@ except AttributeError:
     sys.exit(1)
 
 ## reverse-iteration
-for match in reversed(matches):
+for match in matches:
+    timestamp = calendar.timegm(match.matchDateTime.timetuple())
+    start_time=datetime.datetime.fromtimestamp(timestamp)-datetime.timedelta(hours=DIFF_UTC)
     if match.matchResults:
-        goals =  "({0}) vs ({1})".format(match.matchResults.matchResult[0].pointsTeam1, match.matchResults.matchResult[0].pointsTeam2)
+        goals =  "({0}) - ({1})".format(match.matchResults.matchResult[0].pointsTeam1, match.matchResults.matchResult[0].pointsTeam2)
     else:
-        goals = "vs"
-    print """{team1} {goals} {team2}
-    {start_time}\n""".format(team1=match.nameTeam1.encode("utf-8"),
+        goals = "-"
+    print """<p>{team1} {goals} {team2}, 
+    {start_time}</p>""".format(team1=match.nameTeam1.encode("utf-8"),
         team2=match.nameTeam2.encode("utf-8"), 
-        goals=goals, start_time=match.matchDateTime.strftime("%a, %H:%M Uhr"))
-
+        goals=goals, start_time=start_time.strftime("%a %H:%M"))
